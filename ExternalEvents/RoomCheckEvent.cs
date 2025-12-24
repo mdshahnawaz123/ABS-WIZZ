@@ -1,7 +1,8 @@
 ﻿using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
-using static ABS_WIZZ.Extension;
+using System.Linq;
+using ABS_WIZZ;
 
 namespace ABS_WIZZ.ExternalEvents
 {
@@ -13,20 +14,33 @@ namespace ABS_WIZZ.ExternalEvents
         {
             try
             {
-                UIDocument uidoc = app.ActiveUIDocument;
-                Document doc = uidoc.Document;
-
-                switch (Mode)
+                Document doc = app.ActiveUIDocument?.Document;
+                if (doc == null)
                 {
-                    case RoomCheckMode.getRoom:
-                        TaskDialog.Show("Room Check", "Checking HOST model rooms...");
-                        // 👉 Host room logic here
-                        break;
+                    TaskDialog.Show("Room Check", "No active document.");
+                    return;
+                }
 
-                    case RoomCheckMode.getLinkedRooms:
-                        TaskDialog.Show("Room Check", "Checking LINKED model rooms...");
-                        // 👉 Linked room logic here
-                        break;
+                if (Mode == RoomCheckMode.Host)
+                {
+                    var rooms = doc.GetRooms();
+
+                    int missing = rooms.Count(r =>
+                        string.IsNullOrWhiteSpace(r.LookupParameter("(01)ECD_ABS_L1_Asset")?.AsString()) ||
+                        string.IsNullOrWhiteSpace(r.LookupParameter("(04)ECD_ABS_L2_Level")?.AsString()) ||
+                        string.IsNullOrWhiteSpace(r.LookupParameter("(05)ECD_ABS_L3_Room")?.AsString()));
+
+                    TaskDialog.Show(
+                        "Room Check - HOST",
+                        $"Rooms found: {rooms.Count}\nRooms missing ABS data: {missing}"
+                    );
+                }
+                else if (Mode == RoomCheckMode.Linked)
+                {
+                    TaskDialog.Show(
+                        "Room Check - LINKED",
+                        "Linked room check is not implemented yet."
+                    );
                 }
             }
             catch (Exception ex)
@@ -37,8 +51,7 @@ namespace ABS_WIZZ.ExternalEvents
 
         public string GetName()
         {
-            return "Room Check Event";
+            return "ABS Room Check";
         }
     }
 }
-

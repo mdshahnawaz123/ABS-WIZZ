@@ -68,11 +68,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AbsCommand.cs" />
+    <Compile Include="App\App.cs" />
     <Compile Include="Command\ABSCommand.cs" />
     <Compile Include="Extension.cs" />
     <Compile Include="ExternalEvents\RoomCheckEvent.cs" />
     <Compile Include="ExternalEvents\RoomEleGenEvent.cs" />
     <Compile Include="ExternalEvents\RoomGeneratorEvent.cs" />
+    <Compile Include="ExternalEvents\UniqueNumber.cs" />
+    <Compile Include="ImageUtils.cs" />
+    <Compile Include="RoomCheckMode.cs" />
     <Compile Include="RoomGen.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UI\ECD_ABS.xaml.cs">
@@ -88,6 +92,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\abs.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -1,59 +1,108 @@
 ﻿using ABS_WIZZ.ExternalEvents;
-using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System.Windows;
-using static ABS_WIZZ.Extension;
+using ABS_WIZZ;
+using Autodesk.Revit.DB;
 
 namespace ABS_WIZZ.UI
 {
     public partial class ECD_ABS : Window
     {
-        private ExternalEvent roomGenExternalEvent;
-        private RoomGeneratorEvent roomGenHandler;
+        private readonly ExternalEvent roomCodeGenEvent;
+        private readonly RoomGeneratorEvent roomCodeGenHandler;
 
-        private ExternalEvent roomEleGenExternalEvent;
-        private RoomEleGenEvent roomEleGenHandler;
+        private readonly ExternalEvent roomEleGenEvent;
+        private readonly RoomEleGenEvent roomEleGenHandler;
 
-        private ExternalEvent roomCheckExternalEvent;
-        private RoomCheckEvent roomCheckHandler;
+        private readonly ExternalEvent roomCheckEvent;
+        private readonly RoomCheckEvent roomCheckHandler;
+
+        private readonly ExternalEvent uniqueNumberEvent;
+        private readonly UniqueNumber uniqueNumberHandler;
 
         public ECD_ABS(Document doc, UIDocument uidoc)
         {
             InitializeComponent();
 
-            // 🔹 Create handlers
-            roomGenHandler = new RoomGeneratorEvent();
+            // Initialize Room Code Generator
+            roomCodeGenHandler = new RoomGeneratorEvent();
+            roomCodeGenEvent = ExternalEvent.Create(roomCodeGenHandler);
+
+            // Initialize Room Element Generator
             roomEleGenHandler = new RoomEleGenEvent();
+            roomEleGenEvent = ExternalEvent.Create(roomEleGenHandler);
 
-            // 🔹 Create ExternalEvents
-            roomGenExternalEvent = ExternalEvent.Create(roomGenHandler);
-            roomEleGenExternalEvent = ExternalEvent.Create(roomEleGenHandler);
-
-            // 🔹 Create ExternalEvents
+            // Initialize Room Check
             roomCheckHandler = new RoomCheckEvent();
-            roomCheckExternalEvent = ExternalEvent.Create(roomCheckHandler);
+            roomCheckEvent = ExternalEvent.Create(roomCheckHandler);
+
+            // Initialize Unique Number
+            uniqueNumberHandler = new UniqueNumber();
+            uniqueNumberEvent = ExternalEvent.Create(uniqueNumberHandler);
         }
 
+        // ROOM CODE GENERATOR
         private void RoomCodeGen_Click(object sender, RoutedEventArgs e)
         {
-            roomGenExternalEvent.Raise();
+            if (RbHost.IsChecked == true)
+                roomCodeGenHandler.Mode = RoomCheckMode.Host;
+            else if (RbLinked.IsChecked == true)
+                roomCodeGenHandler.Mode = RoomCheckMode.Linked;
+            else
+            {
+                TaskDialog.Show("ABS WIZZ", "Please select Host or Linked model.");
+                return;
+            }
+
+            roomCodeGenEvent.Raise();
         }
 
+        // ROOM ELEMENT ASSIGNMENT
         private void RoomEleGen_Click(object sender, RoutedEventArgs e)
         {
-            roomEleGenExternalEvent.Raise();
+            if (RbHost.IsChecked == true)
+                roomEleGenHandler.Mode = RoomCheckMode.Host;
+            else if (RbLinked.IsChecked == true)
+                roomEleGenHandler.Mode = RoomCheckMode.Linked;
+            else
+            {
+                TaskDialog.Show("ABS WIZZ", "Please select Host or Linked model.");
+                return;
+            }
+
+            roomEleGenEvent.Raise();
         }
-        private void LinkedModelCheck(object sender, RoutedEventArgs e)
+
+        // EQUIPMENT UNIQUE NUMBER
+        private void UniqueNumber_Click(object sender, RoutedEventArgs e)
         {
-            roomCheckHandler.Mode = RoomCheckMode.getLinkedRooms;
-            roomCheckExternalEvent.Raise();
-            TaskDialog.Show("Host Model Rooms", "Functionality to check Linked model rooms is not yet implemented.");
+            if (RbHost.IsChecked == true)
+                uniqueNumberHandler.Mode = RoomCheckMode.Host;
+            else if (RbLinked.IsChecked == true)
+                uniqueNumberHandler.Mode = RoomCheckMode.Linked;
+            else
+            {
+                TaskDialog.Show("ABS WIZZ", "Please select Host or Linked model.");
+                return;
+            }
+
+            uniqueNumberEvent.Raise();
         }
-        private void HostModelCheck(object sender, RoutedEventArgs e)
+
+        // ROOM CHECK
+        private void RoomCheck_Click(object sender, RoutedEventArgs e)
         {
-            roomCheckHandler.Mode = RoomCheckMode.getRoom;
-            roomCheckExternalEvent.Raise();
-            TaskDialog.Show("Host Model Rooms", "Functionality to check host model rooms is not yet implemented.");
+            if (RbHost.IsChecked == true)
+                roomCheckHandler.Mode = RoomCheckMode.Host;
+            else if (RbLinked.IsChecked == true)
+                roomCheckHandler.Mode = RoomCheckMode.Linked;
+            else
+            {
+                TaskDialog.Show("ABS WIZZ", "Please select Host or Linked model.");
+                return;
+            }
+
+            roomCheckEvent.Raise();
         }
     }
 }
