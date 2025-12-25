@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:ABS_WIZZ.UI"
         mc:Ignorable="d"
         Title="ECD ABS Manager"
-        Height="750"
+        Height="880"
         Width="900"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanMinimize"
@@ -286,15 +286,65 @@
             </StackPanel>
         </Border>
 
-        <!-- FOOTER INFO -->
-        <Border Grid.Row="7" 
-                VerticalAlignment="Bottom"
-                Background="Transparent"
-                Padding="0,16,0,0">
-            <TextBlock Text="💡 Tip: Select Model Scope before running operations" 
-                      FontSize="12" 
-                      Foreground="#6B7280"
-                      HorizontalAlignment="Center"/>
+        <!-- ONSITE EQUIPMENT TAG CARD -->
+        <Border Grid.Row="7" Style="{StaticResource CardPanel}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                    <Border Background="Brown" 
+                    CornerRadius="8" 
+                    Padding="10"
+                    Margin="0,0,12,0">
+                        <TextBlock Text="🔢" FontSize="20"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource SectionHeader}" Margin="0">
+                    Onsite Equipment Tag
+                        </TextBlock>
+                        <TextBlock Text="Assign onsite equipment tag" 
+                          FontSize="12" 
+                          Foreground="#6B7280"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <Button Content="Assign Onsite Tag"
+                Style="{StaticResource SecondaryButton}"
+                Width="200"
+                HorizontalAlignment="Left"
+                Click="onsitenumber_Click"/>
+            </StackPanel>
         </Border>
+
+        <!-- FOOTER INFO -->
+        <Border Grid.Row="8"
+        VerticalAlignment="Bottom"
+        Background="Transparent"
+        Padding="0,16,0,0">
+
+            <StackPanel HorizontalAlignment="Center">
+
+                <!-- Tip -->
+                <TextBlock FontSize="12"
+                   Foreground="#6B7280"
+                   TextAlignment="Center">
+            💡 Tip: Select Model Scope before running operations
+                </TextBlock>
+
+                <!-- Technical Support -->
+                <TextBlock FontSize="11"
+                   Foreground="#9CA3AF"
+                   Margin="0,6,0,0"
+                   TextAlignment="Center">
+
+            ⚙ Technical Issue? Email:
+            <Hyperlink NavigateUri="mailto:mohammad.shahnawaz@expocitydubai.ae"
+                       RequestNavigate="Hyperlink_RequestNavigate">
+                mohammad.shahnawaz@expocitydubai.ae
+            </Hyperlink>
+
+                </TextBlock>
+
+            </StackPanel>
+        </Border>
+
     </Grid>
 </Window>

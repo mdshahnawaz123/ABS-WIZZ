@@ -15,15 +15,19 @@ namespace ABS_WIZZ.App
         {
             try
             {
-                // Create Tab (safe)
+                // 1. Create Ribbon Tab (safe)
                 try
                 {
                     application.CreateRibbonTab(TAB_NAME);
                 }
-                catch { }
+                catch
+                {
+                    // Tab already exists
+                }
 
-                // Get or Create Panel
+                // 2. Get or Create Panel
                 RibbonPanel panel = null;
+
                 foreach (RibbonPanel p in application.GetRibbonPanels(TAB_NAME))
                 {
                     if (p.Name == PANEL_NAME)
@@ -34,35 +38,37 @@ namespace ABS_WIZZ.App
                 }
 
                 if (panel == null)
+                {
                     panel = application.CreateRibbonPanel(TAB_NAME, PANEL_NAME);
+                }
 
-                // Prevent duplicate button
+                // 3. Prevent duplicate button
                 foreach (var item in panel.GetItems())
                 {
                     if (item.Name == BUTTON_NAME)
                         return Result.Succeeded;
                 }
 
-                // Button Data
+                // 4. Create Button
                 PushButtonData buttonData = new PushButtonData(
                     "ABS_WIZZ_BTN",
                     BUTTON_NAME,
                     Assembly.GetExecutingAssembly().Location,
-                    "ABS-WIZZ.ABSCommand"
+                    "ABS_WIZZ.Command.ABSCommand"
                 );
 
                 PushButton button = panel.AddItem(buttonData) as PushButton;
 
-                // Images (Embedded Resources)
+                // 5. Button Images (Embedded Resources)
                 button.LargeImage = ImageUtils.GetEmbeddedImage(
                     "ABS_WIZZ.Resources.abs.png");
 
                 button.Image = ImageUtils.GetEmbeddedImage(
                     "ABS_WIZZ.Resources.abs16.png");
 
-                // Optional extras
-                button.ToolTip = "Launch ABS Wizz tool";
-                button.LongDescription = "Advanced building system wizard for ECD tools.";
+                // 6. Tooltip
+                button.ToolTip = "Asset Breakdown Information";
+                button.LongDescription = "Generates and validates Asset Breakdown Structure (ABS) data for ECD projects, ensuring consistent asset classification, parameter completeness, and readiness for handover.";
 
                 return Result.Succeeded;
             }
