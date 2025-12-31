@@ -20,6 +20,9 @@ namespace ABS_WIZZ.UI
         private readonly ExternalEvent uniqueNumberEvent;
         private readonly UniqueNumber uniqueNumberHandler;
 
+        private readonly ExternalEvent onsiteEquTagEvent;
+        private readonly OnsiteEquTag onsiteEquTagHandler;
+
         public ECD_ABS(Document doc, UIDocument uidoc)
         {
             InitializeComponent();
@@ -39,6 +42,9 @@ namespace ABS_WIZZ.UI
             // Initialize Unique Number
             uniqueNumberHandler = new UniqueNumber();
             uniqueNumberEvent = ExternalEvent.Create(uniqueNumberHandler);
+
+            onsiteEquTagHandler = new OnsiteEquTag();
+            onsiteEquTagEvent = ExternalEvent.Create(onsiteEquTagHandler);
         }
 
         // ROOM CODE GENERATOR
@@ -104,18 +110,29 @@ namespace ABS_WIZZ.UI
 
             roomCheckEvent.Raise();
         }
-        //Email Notify_Click
 
+        //Onsite Equipment Tag Generator
+        private void OnsiteTagGen_Click(object sender, RoutedEventArgs e)
+        {
+            if (RbHost.IsChecked == true)
+                onsiteEquTagHandler.Mode = RoomCheckMode.Host;
+            else if (RbLinked.IsChecked == true)
+                onsiteEquTagHandler.Mode = RoomCheckMode.Linked;
+            else
+            {
+                TaskDialog.Show("ABS WIZZ", "Please select Host or Linked model.");
+                return;
+            }
+
+            onsiteEquTagEvent.Raise();
+        }
+
+
+        //Email Notify_Click
         private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
             e.Handled = true;
-        }
-
-        //Onsite Equipment Tag Generator
-        private void onsitenumber_Click(object sender, RoutedEventArgs e)
-        {
-            TaskDialog.Show("ABS WIZZ", "Onsite Equipment Tag Generation is not implemented yet.");
         }
     }
 }

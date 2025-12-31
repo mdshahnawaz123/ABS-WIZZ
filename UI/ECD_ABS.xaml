@@ -310,7 +310,7 @@
                 Style="{StaticResource SecondaryButton}"
                 Width="200"
                 HorizontalAlignment="Left"
-                Click="onsitenumber_Click"/>
+                Click="OnsiteTagGen_Click"/>
             </StackPanel>
         </Border>
 

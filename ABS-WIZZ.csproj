@@ -108,6 +108,8 @@
     <Compile Include="Command\ABSCommand.cs" />
     <Compile Include="Command\UserRecord.cs" />
     <Compile Include="Extension.cs" />
+    <Compile Include="ExternalEvents\OnsiteEquTag3.cs" />
+    <Compile Include="ExternalEvents\OnsiteEquTag.cs" />
     <Compile Include="ExternalEvents\RoomCheckEvent.cs" />
     <Compile Include="ExternalEvents\RoomEleGenEvent.cs" />
     <Compile Include="ExternalEvents\RoomGeneratorEvent.cs" />
