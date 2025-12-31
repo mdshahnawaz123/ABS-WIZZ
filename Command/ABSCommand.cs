@@ -1,11 +1,11 @@
 ﻿using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Asset.Services;
+using ABS_WIZZ.UI;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Interop;
 
 namespace ABS_WIZZ.Command
 {
@@ -17,19 +17,36 @@ namespace ABS_WIZZ.Command
         {
             var uidoc = commandData.Application.ActiveUIDocument;
             var doc = uidoc.Document;
+
             try
             {
-                // Placeholder for ABS command implementation
-                var frm = new UI.ECD_ABS(doc,uidoc);
+                // 🔐 STEP 1 — License Check (Task.Run fixes deadlock on 2nd+ run)
+                var result = Task.Run(async () => await LicenseManager.TryAutoLoginAsync()).Result;
+
+                if (!result.Success)
+                {
+                    var login = new LoginWindow();
+
+                    // Attach WPF window to Revit
+                    var helper = new WindowInteropHelper(login);
+                    helper.Owner = System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle;
+
+                    var dlg = login.ShowDialog();
+                    if (dlg != true)
+                        return Result.Cancelled;
+                }
+
+                // ✅ LICENSE OK — RUN YOUR TOOL
+                var frm = new UI.ECD_ABS(doc, uidoc);
                 frm.Show();
-                //TaskDialog.Show("ABS Command", "ABS Command executed successfully.");
+
+                return Result.Succeeded;
             }
             catch (Exception ex)
             {
-                TaskDialog.Show("Error", ex.Message);
+                TaskDialog.Show("ABS Wizz Error", ex.Message);
                 return Result.Failed;
             }
-            return Result.Succeeded;
         }
     }
 }

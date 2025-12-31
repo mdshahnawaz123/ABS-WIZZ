@@ -118,6 +118,8 @@
     <Compile Include="RoomGen.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\AuthService.cs" />
+    <Compile Include="Services\LicenseManager.cs" />
+    <Compile Include="Services\LoginResult.cs" />
     <Compile Include="Services\MachineHelper.cs" />
     <Compile Include="Services\TokenService.cs" />
     <Compile Include="UI\ECD_ABS.xaml.cs">

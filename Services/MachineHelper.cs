@@ -1,9 +1,5 @@
 ﻿using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Asset.Services
 {
@@ -15,13 +11,12 @@ namespace Asset.Services
             {
                 using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Cryptography"))
                 {
-                    var guid = key?.GetValue("MachineGuid") as string;
-                    if (!string.IsNullOrWhiteSpace(guid)) return guid;
+                    return key?.GetValue("MachineGuid") as string;
                 }
             }
-            catch { /* ignore */ }
+            catch { }
 
-            return Environment.MachineName ?? "unknown-machine";
+            return Environment.MachineName;
         }
     }
 }

@@ -1,8 +1,8 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.IO;
-using System.Text;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace Asset.Services
 {
@@ -10,45 +10,45 @@ namespace Asset.Services
     {
         public string Username { get; set; }
         public string MachineId { get; set; }
+        public string Plan { get; set; }
         public DateTime ExpiresUtc { get; set; }
     }
 
     public static class TokenService
     {
-        private static readonly string TokenFolder =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CostAnalysis");
-        private static readonly string TokenPath = Path.Combine(TokenFolder, "auth.token");
+        private static readonly string Folder =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ABS_WIZZ");
 
-        private static readonly DataProtectionScope Scope = DataProtectionScope.CurrentUser;
+        private static readonly string PathFile = System.IO.Path.Combine(Folder, "auth.dat");
 
         public static void SaveToken(LocalAuthToken token)
         {
-            Directory.CreateDirectory(TokenFolder);
+            Directory.CreateDirectory(Folder);
+
             var json = JsonConvert.SerializeObject(token);
-            var bytes = Encoding.UTF8.GetBytes(json);
-            var protectedBytes = ProtectedData.Protect(bytes, null, Scope);
-            File.WriteAllBytes(TokenPath, protectedBytes);
+            var data = Encoding.UTF8.GetBytes(json);
+            var enc = ProtectedData.Protect(data, Encoding.UTF8.GetBytes("ABS_SALT"), DataProtectionScope.CurrentUser);
+
+            File.WriteAllBytes(PathFile, enc);
         }
 
         public static LocalAuthToken LoadToken()
         {
             try
             {
-                if (!File.Exists(TokenPath)) return null;
-                var protectedBytes = File.ReadAllBytes(TokenPath);
-                var bytes = ProtectedData.Unprotect(protectedBytes, null, Scope);
-                var json = Encoding.UTF8.GetString(bytes);
-                return JsonConvert.DeserializeObject<LocalAuthToken>(json);
+                if (!File.Exists(PathFile)) return null;
+
+                var enc = File.ReadAllBytes(PathFile);
+                var data = ProtectedData.Unprotect(enc, Encoding.UTF8.GetBytes("ABS_SALT"), DataProtectionScope.CurrentUser);
+                return JsonConvert.DeserializeObject<LocalAuthToken>(Encoding.UTF8.GetString(data));
             }
-            catch
-            {
-                return null;
-            }
+            catch { return null; }
         }
 
         public static void DeleteToken()
         {
-            try { if (File.Exists(TokenPath)) File.Delete(TokenPath); } catch { }
+            if (File.Exists(PathFile))
+                File.Delete(PathFile);
         }
     }
 }
