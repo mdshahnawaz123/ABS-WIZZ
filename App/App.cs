@@ -15,17 +15,8 @@ namespace ABS_WIZZ.App
         {
             try
             {
-                // 1. Create Ribbon Tab (safe)
-                try
-                {
-                    application.CreateRibbonTab(TAB_NAME);
-                }
-                catch
-                {
-                    // Tab already exists
-                }
+                try { application.CreateRibbonTab(TAB_NAME); } catch { }
 
-                // 2. Get or Create Panel
                 RibbonPanel panel = null;
 
                 foreach (RibbonPanel p in application.GetRibbonPanels(TAB_NAME))
@@ -38,18 +29,14 @@ namespace ABS_WIZZ.App
                 }
 
                 if (panel == null)
-                {
                     panel = application.CreateRibbonPanel(TAB_NAME, PANEL_NAME);
-                }
 
-                // 3. Prevent duplicate button
                 foreach (var item in panel.GetItems())
                 {
                     if (item.Name == BUTTON_NAME)
                         return Result.Succeeded;
                 }
 
-                // 4. Create Button
                 PushButtonData buttonData = new PushButtonData(
                     "ABS_WIZZ_BTN",
                     BUTTON_NAME,
@@ -59,16 +46,24 @@ namespace ABS_WIZZ.App
 
                 PushButton button = panel.AddItem(buttonData) as PushButton;
 
-                // 5. Button Images (Embedded Resources)
-                button.LargeImage = ImageUtils.GetEmbeddedImage(
-                    "ABS_WIZZ.Resources.abs.png");
+                button.LargeImage = ImageUtils.GetEmbeddedImage("ABS_WIZZ.Resources.abs.png");
+                button.Image = ImageUtils.GetEmbeddedImage("ABS_WIZZ.Resources.abs16.png");
 
-                button.Image = ImageUtils.GetEmbeddedImage(
-                    "ABS_WIZZ.Resources.abs16.png");
-
-                // 6. Tooltip
                 button.ToolTip = "Asset Breakdown Information";
-                button.LongDescription = "Generates and validates Asset Breakdown Structure (ABS) data for ECD projects, ensuring consistent asset classification, parameter completeness, and readiness for handover.";
+                button.LongDescription =
+                    "Generates and validates Asset Breakdown Structure (ABS) data.";
+
+                // ============================================
+                // ✅ F1 HELP SUPPORT (LOCAL HTML)
+                // ============================================
+
+                string helpPath =
+                    @"C:\ProgramData\BIM Digital Design\ECD ABS Manager\Resources\ECD_ABS_Manager.htm";
+
+                ContextualHelp help = new ContextualHelp(ContextualHelpType.ChmFile, helpPath);
+                button.SetContextualHelp(help);
+
+                // ============================================
 
                 return Result.Succeeded;
             }

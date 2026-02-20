@@ -3,11 +3,23 @@ using Autodesk.Revit.UI;
 using System.Windows;
 using ABS_WIZZ;
 using Autodesk.Revit.DB;
+using System;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
+
+// FIX: Alias Drawing to avoid Revit conflicts
+using Drawing = System.Drawing;
 
 namespace ABS_WIZZ.UI
 {
     public partial class ECD_ABS : Window
     {
+        // Windows API
+        [DllImport("user32.dll")]
+        static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+
+        const int WM_SETICON = 0x80;
+
         private readonly ExternalEvent roomCodeGenEvent;
         private readonly RoomGeneratorEvent roomCodeGenHandler;
 
@@ -27,19 +39,15 @@ namespace ABS_WIZZ.UI
         {
             InitializeComponent();
 
-            // Initialize Room Code Generator
             roomCodeGenHandler = new RoomGeneratorEvent();
             roomCodeGenEvent = ExternalEvent.Create(roomCodeGenHandler);
 
-            // Initialize Room Element Generator
             roomEleGenHandler = new RoomEleGenEvent();
             roomEleGenEvent = ExternalEvent.Create(roomEleGenHandler);
 
-            // Initialize Room Check
             roomCheckHandler = new RoomCheckEvent();
             roomCheckEvent = ExternalEvent.Create(roomCheckHandler);
 
-            // Initialize Unique Number
             uniqueNumberHandler = new UniqueNumber();
             uniqueNumberEvent = ExternalEvent.Create(uniqueNumberHandler);
 
@@ -47,7 +55,70 @@ namespace ABS_WIZZ.UI
             onsiteEquTagEvent = ExternalEvent.Create(onsiteEquTagHandler);
         }
 
-        // ROOM CODE GENERATOR
+        // ✅ REMOVE REVIT ICON + ADD BDD ICON
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+
+            var hwnd = new WindowInteropHelper(this).Handle;
+
+            // Remove Revit icon
+            SendMessage(hwnd, WM_SETICON, (IntPtr)0, IntPtr.Zero);
+            SendMessage(hwnd, WM_SETICON, (IntPtr)1, IntPtr.Zero);
+
+            // Add BDD icon
+            var icon = CreateTextIcon("B");
+
+            SendMessage(hwnd, WM_SETICON, (IntPtr)0, icon.Handle);
+            SendMessage(hwnd, WM_SETICON, (IntPtr)1, icon.Handle);
+        }
+
+        // ✅ SAFE ICON GENERATOR (NO REvit conflicts)
+        private Drawing.Icon CreateTextIcon(string text)
+        {
+            int size = 32;
+            var bmp = new Drawing.Bitmap(size, size);
+            var g = Drawing.Graphics.FromImage(bmp);
+
+            g.SmoothingMode = Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            g.Clear(Drawing.Color.FromArgb(30, 58, 138)); // blue background
+
+            // BIG B
+            using (var fontB = new Drawing.Font("Segoe UI Black", 22, Drawing.FontStyle.Bold, Drawing.GraphicsUnit.Pixel))
+            using (var brushWhite = new Drawing.SolidBrush(Drawing.Color.White))
+            {
+                var rect = new Drawing.Rectangle(0, 0, size, size);
+
+                var format = new Drawing.StringFormat
+                {
+                    Alignment = Drawing.StringAlignment.Center,
+                    LineAlignment = Drawing.StringAlignment.Center
+                };
+
+                g.DrawString("B", fontB, brushWhite, rect, format);
+            }
+
+            // SMALL DD inside
+            using (var fontDD = new Drawing.Font("Segoe UI", 7, Drawing.FontStyle.Bold, Drawing.GraphicsUnit.Pixel))
+            using (var brushBlue = new Drawing.SolidBrush(Drawing.Color.FromArgb(30, 58, 138)))
+            {
+                var rect = new Drawing.Rectangle(0, size / 2, size, size / 2);
+
+                var format = new Drawing.StringFormat
+                {
+                    Alignment = Drawing.StringAlignment.Center,
+                    LineAlignment = Drawing.StringAlignment.Center
+                };
+
+                g.DrawString("DD", fontDD, brushBlue, rect, format);
+            }
+
+            var hIcon = bmp.GetHicon();
+            return Drawing.Icon.FromHandle(hIcon);
+        }
+
+        // ================= BUTTON EVENTS =================
+
         private void RoomCodeGen_Click(object sender, RoutedEventArgs e)
         {
             if (RbHost.IsChecked == true)
@@ -63,7 +134,6 @@ namespace ABS_WIZZ.UI
             roomCodeGenEvent.Raise();
         }
 
-        // ROOM ELEMENT ASSIGNMENT
         private void RoomEleGen_Click(object sender, RoutedEventArgs e)
         {
             if (RbHost.IsChecked == true)
@@ -79,7 +149,6 @@ namespace ABS_WIZZ.UI
             roomEleGenEvent.Raise();
         }
 
-        // EQUIPMENT UNIQUE NUMBER
         private void UniqueNumber_Click(object sender, RoutedEventArgs e)
         {
             if (RbHost.IsChecked == true)
@@ -95,7 +164,6 @@ namespace ABS_WIZZ.UI
             uniqueNumberEvent.Raise();
         }
 
-        // ROOM CHECK
         private void RoomCheck_Click(object sender, RoutedEventArgs e)
         {
             if (RbHost.IsChecked == true)
@@ -111,7 +179,6 @@ namespace ABS_WIZZ.UI
             roomCheckEvent.Raise();
         }
 
-        //Onsite Equipment Tag Generator
         private void OnsiteTagGen_Click(object sender, RoutedEventArgs e)
         {
             if (RbHost.IsChecked == true)
@@ -127,11 +194,10 @@ namespace ABS_WIZZ.UI
             onsiteEquTagEvent.Raise();
         }
 
-
-        //Email Notify_Click
         private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
             e.Handled = true;
         }
     }

@@ -1,3 +1,9 @@
 <Solution>
-  <Project Path="ABS-WIZZ.csproj" Id="0624d9d7-5994-4d33-ac9b-dd1387f45b35" />
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="ABS-WIZZ.csproj" Id="0624d9d7-5994-4d33-ac9b-dd1387f45b35">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
 </Solution>

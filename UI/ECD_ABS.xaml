@@ -5,12 +5,13 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:local="clr-namespace:ABS_WIZZ.UI"
         mc:Ignorable="d"
-        Title="ECD ABS Manager"
+        Title="ABS Manager"
         Height="880"
         Width="900"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanMinimize"
-        Background="#F5F7FA">
+        Background="#F5F7FA"
+        Icon="{x:Null}">
 
     <Window.Resources>
         <!-- Modern Button Style -->
