@@ -4,7 +4,9 @@ using Autodesk.Revit.UI;
 using Asset.Services;
 using ABS_WIZZ.UI;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Interop;
 
 namespace ABS_WIZZ.Command
@@ -13,38 +15,60 @@ namespace ABS_WIZZ.Command
     [Regeneration(RegenerationOption.Manual)]
     public class ABSCommand : IExternalCommand
     {
+        // ── Singleton window instance ─────────────────────────────────────────
+        private static ECD_ABS _window;
+
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            var uidoc = commandData.Application.ActiveUIDocument;
-            var doc = uidoc.Document;
-
             try
             {
-                // 🔐 STEP 1 — License Check (Task.Run fixes deadlock on 2nd+ run)
-                var result = Task.Run(async () => await LicenseManager.TryAutoLoginAsync()).Result;
+                var uidoc = commandData.Application.ActiveUIDocument;
+                var doc = uidoc.Document;
 
-                if (!result.Success)
+                // ── 1. Prevent duplicate windows ──────────────────────────────
+                if (_window != null)
+                {
+                    _window.Activate();
+                    _window.Focus();
+                    return Result.Succeeded;
+                }
+
+                // ── 2. License Check ──────────────────────────────────────────
+                var licenseResult = Task.Run(async () =>
+                    await LicenseManager.TryAutoLoginAsync()
+                ).GetAwaiter().GetResult();
+
+                if (!licenseResult.Success)
                 {
                     var login = new LoginWindow();
-
-                    // Attach WPF window to Revit
                     var helper = new WindowInteropHelper(login);
-                    helper.Owner = System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle;
+                    helper.Owner = System.Diagnostics.Process
+                        .GetCurrentProcess()
+                        .MainWindowHandle;
 
-                    var dlg = login.ShowDialog();
+                    bool? dlg = login.ShowDialog();
                     if (dlg != true)
                         return Result.Cancelled;
                 }
 
-                // ✅ LICENSE OK — RUN YOUR TOOL
-                var frm = new UI.ECD_ABS(doc, uidoc);
-                frm.Show();
+                // ── 3. Launch Tool ────────────────────────────────────────────
+                _window = new ECD_ABS(doc, uidoc);
+
+                // Clear static ref when window is closed
+                _window.Closed += (s, e) => _window = null;
+
+                _window.Show();
 
                 return Result.Succeeded;
             }
+            catch (OperationCanceledException)
+            {
+                return Result.Cancelled;
+            }
             catch (Exception ex)
             {
-                TaskDialog.Show("ABS Wizz Error", ex.Message);
+                message = ex.Message;
+                TaskDialog.Show("ABS Wizz — Error", $"{ex.Message}\n\n{ex.StackTrace}");
                 return Result.Failed;
             }
         }
