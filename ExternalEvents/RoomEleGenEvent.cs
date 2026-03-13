@@ -23,15 +23,19 @@ namespace ABS_WIZZ.ExternalEvents
             {
                 tx.Start();
 
-                var collector = new FilteredElementCollector(doc);
+                FilteredElementCollector collector;
                 if (IsActiveView && doc.ActiveView != null)
                 {
-                    collector.OwnedByView(doc.ActiveView.Id);
+                    collector = new FilteredElementCollector(doc, doc.ActiveView.Id);
+                }
+                else
+                {
+                    collector = new FilteredElementCollector(doc);
                 }
 
                 var hostElements = collector
                     .WhereElementIsNotElementType()
-                    .Where(e => e.Category != null && !e.ViewSpecific)
+                    .Where(e => !e.ViewSpecific && e.Category != null && e.Category.CategoryType == CategoryType.Model)
                     .ToList();
 
                 if (Mode == RoomCheckMode.Host)
@@ -42,7 +46,7 @@ namespace ABS_WIZZ.ExternalEvents
                     var roomCollector = new FilteredElementCollector(doc);
                     if (IsActiveView && doc.ActiveView != null)
                     {
-                        roomCollector.OwnedByView(doc.ActiveView.Id);
+                        roomCollector = new FilteredElementCollector(doc, doc.ActiveView.Id);
                     }
 
                     var rooms = roomCollector
@@ -60,25 +64,31 @@ namespace ABS_WIZZ.ExternalEvents
                         BoundingBoxXYZ roomBB = Extension.GetHostRoomBBox(room);
                         if (roomBB == null) continue;
 
-                        foreach (Element el in hostElements)
+                        Outline outline = new Outline(roomBB.Min, roomBB.Max);
+                        BoundingBoxIntersectsFilter bbFilter = new BoundingBoxIntersectsFilter(outline);
+
+                        // Only check elements that intersect the room's bounding box
+                        var candidateElements = hostElements
+                            .Where(el => bbFilter.PassesFilter(el))
+                            .ToList();
+
+                        foreach (Element el in candidateElements)
                         {
                             XYZ p = el.GetElementPoint();
-                            if (p == null) continue;
+                            bool inside = false;
 
-                            bool inside = room.IsPointInRoom(p);
-
-                            if (!inside)
+                            if (p != null)
                             {
-                                // geometry fallback
-                                Solid elSolid = el.GetElementSolid();
-                                if (elSolid == null) continue;
+                                inside = room.IsPointInRoom(p);
+                            }
 
-                                Outline outline = new Outline(roomBB.Min, roomBB.Max);
-                                BoundingBoxIntersectsFilter bbFilter =
-                                    new BoundingBoxIntersectsFilter(outline);
-
-                                if (!bbFilter.PassesFilter(el))
-                                    continue;
+                            // If point is not in room, we still process it because bbFilter passed
+                            // this handles elements where the location point might be slightly outside
+                            // but the body is inside
+                            if (!inside && p != null)
+                            {
+                                // Optional: deeper check here, but for now, intersection is enough
+                                // for elements that don't have a perfect point
                             }
 
                             el.SetStringParam("(01)ECD_ABS_L1_Asset", asset);
@@ -114,28 +124,34 @@ namespace ABS_WIZZ.ExternalEvents
                             string level = room.LookupParameter("(04)ECD_ABS_L2_Level")?.AsString();
                             string roomNum = room.LookupParameter("(05)ECD_ABS_L3_Room")?.AsString();
 
-                            BoundingBoxXYZ roomBB =
-                                Extension.GetLinkedRoomBBox(room, link);
+                            BoundingBoxXYZ roomBB = Extension.GetLinkedRoomBBox(room, link);
                             if (roomBB == null) continue;
 
-                            foreach (Element el in hostElements)
+                            Outline outline = new Outline(roomBB.Min, roomBB.Max);
+                            BoundingBoxIntersectsFilter bbFilter = new BoundingBoxIntersectsFilter(outline);
+
+                            Transform linkTransform = link.GetTransform();
+                            Transform inverseTransform = linkTransform.Inverse;
+
+                            // Only check elements that intersect the room's bounding box (in host space)
+                            var candidateElements = hostElements
+                                .Where(el => bbFilter.PassesFilter(el))
+                                .ToList();
+
+                            foreach (Element el in candidateElements)
                             {
                                 XYZ p = el.GetElementPoint();
-                                bool inside = Extension.IsPointInsideBBox(p, roomBB);
+                                bool inside = false;
 
-                                if (!inside)
+                                if (p != null)
                                 {
-                                    Solid elSolid = el.GetElementSolid();
-                                    if (elSolid == null) continue;
-
-                                    Outline outline =
-                                        new Outline(roomBB.Min, roomBB.Max);
-                                    BoundingBoxIntersectsFilter bbFilter =
-                                        new BoundingBoxIntersectsFilter(outline);
-
-                                    if (!bbFilter.PassesFilter(el))
-                                        continue;
+                                    // Transform host point p to link coordinates for IsPointInRoom check
+                                    XYZ transPoint = inverseTransform.OfPoint(p);
+                                    inside = room.IsPointInRoom(transPoint);
                                 }
+
+                                // If point not in room, we still proceed if the BB filter passed
+                                // This ensures maximum coverage for furniture/plumbing
 
                                 el.SetStringParam("(01)ECD_ABS_L1_Asset", asset);
                                 el.SetStringParam("(04)ECD_ABS_L2_Level", level);

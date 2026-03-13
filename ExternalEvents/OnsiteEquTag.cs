@@ -24,18 +24,20 @@ namespace ABS_WIZZ.ExternalEvents
                 {
                     tx.Start();
 
-                    var collector = new FilteredElementCollector(doc);
+                    FilteredElementCollector collector;
                     if (IsActiveView && doc.ActiveView != null)
                     {
-                        collector.OwnedByView(doc.ActiveView.Id);
+                        collector = new FilteredElementCollector(doc, doc.ActiveView.Id);
+                    }
+                    else
+                    {
+                        collector = new FilteredElementCollector(doc);
                     }
 
                     List<Element> elements = collector
                         .WhereElementIsNotElementType()
                         .Where(e =>
-                            e.Category != null &&
                             !e.ViewSpecific &&
-                            e.Location != null &&
                             IsValidPhysicalCategory(e.Category))
                         .ToList();
 
@@ -109,16 +111,12 @@ namespace ABS_WIZZ.ExternalEvents
         {
             if (cat == null) return false;
 
-            // Exclude annotation & analytical categories
-            if (cat.CategoryType == CategoryType.Annotation)
-                return false;
+            // Include ALL model categories
+            if (cat.CategoryType == CategoryType.Model)
+                return true;
 
-            // Exclude imports / links
-            if (cat.Id.Value == (int)BuiltInCategory.OST_RvtLinks ||
-                cat.Id.Value == (int)BuiltInCategory.OST_ImportObjectStyles)
-                return false;
-
-            return true;
+            // Exclude others (Annotation, Analytical, etc.)
+            return false;
         }
 
         public string GetName()

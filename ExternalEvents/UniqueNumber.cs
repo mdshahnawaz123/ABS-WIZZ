@@ -80,7 +80,7 @@ namespace ABS_WIZZ.ExternalEvents
                 BoundingBoxXYZ roomBB = Extension.GetHostRoomBBox(room);
                 if (roomBB == null) continue;
 
-                List<Element> roomElements = GetElementsInRoom(hostElements, room);
+                List<Element> roomElements = GetElementsInRoom(hostElements, room, null);
                 totalUpdated += AssignUniqueNumbers(roomElements);
             }
 
@@ -116,7 +116,8 @@ namespace ABS_WIZZ.ExternalEvents
                     BoundingBoxXYZ roomBB = Extension.GetLinkedRoomBBox(room, link);
                     if (roomBB == null) continue;
 
-                    List<Element> roomElements = GetElementsInRoom(hostElements, room);
+                    Transform linkTransform = link.GetTransform();
+                    List<Element> roomElements = GetElementsInRoom(hostElements, room, linkTransform);
                     totalUpdated += AssignUniqueNumbers(roomElements);
                 }
             }
@@ -127,22 +128,42 @@ namespace ABS_WIZZ.ExternalEvents
         // ============================
         // ELEMENTS INSIDE ROOM
         // ============================
-        private List<Element> GetElementsInRoom(List<Element> elements, Room room)
+        private List<Element> GetElementsInRoom(List<Element> elements, Room room, Transform linkTransform)
         {
             List<Element> result = new List<Element>();
 
             BoundingBoxXYZ roomBB = room.get_BoundingBox(null);
             if (roomBB == null) return result;
 
-            Outline outline = new Outline(roomBB.Min, roomBB.Max);
+            // If it's a linked room, we need to transform the bounding box for the BB filter
+            BoundingBoxXYZ hostRoomBB = roomBB;
+            if (linkTransform != null)
+            {
+                hostRoomBB = new BoundingBoxXYZ
+                {
+                    Min = linkTransform.OfPoint(roomBB.Min),
+                    Max = linkTransform.OfPoint(roomBB.Max)
+                };
+            }
+
+            Outline outline = new Outline(hostRoomBB.Min, hostRoomBB.Max);
             BoundingBoxIntersectsFilter bbFilter = new BoundingBoxIntersectsFilter(outline);
+
+            Transform inverseTransform = linkTransform?.Inverse;
 
             foreach (Element el in elements)
             {
                 XYZ p = el.GetElementPoint();
+                if (p == null) continue;
+
+                XYZ checkPoint = p;
+                if (inverseTransform != null)
+                {
+                    checkPoint = inverseTransform.OfPoint(p);
+                }
 
                 // Check using IsPointInRoom for better accuracy
-                if (p != null && room.IsPointInRoom(p))
+                if (room.IsPointInRoom(checkPoint))
                 {
                     result.Add(el);
                     continue;
@@ -205,10 +226,14 @@ namespace ABS_WIZZ.ExternalEvents
         // ============================
         private List<Element> GetHostElements(Document doc)
         {
-            var collector = new FilteredElementCollector(doc);
+            FilteredElementCollector collector;
             if (IsActiveView && doc.ActiveView != null)
             {
-                collector.OwnedByView(doc.ActiveView.Id);
+                collector = new FilteredElementCollector(doc, doc.ActiveView.Id);
+            }
+            else
+            {
+                collector = new FilteredElementCollector(doc);
             }
 
             return collector
