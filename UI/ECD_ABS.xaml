@@ -1,4 +1,4 @@
-﻿<Window x:Class="ABS_WIZZ.UI.ECD_ABS"
+<Window x:Class="ABS_WIZZ.UI.ECD_ABS"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:ABS_WIZZ.UI"
         mc:Ignorable="d"
         Title="ABS Manager"
-        Height="880"
+        Height="980"
         Width="900"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanMinimize"
@@ -253,7 +253,14 @@
                         <RadioButton Content="Linked Model"
                                     Name="RbLinked"
                                     GroupName="ModelScope"
-                                    Margin="0,0,0,0"/>
+                                    Margin="0,0,0,12"/>
+
+                        <CheckBox Content="Active View Only"
+                                  Name="CbActiveView"
+                                  FontSize="14"
+                                  Foreground="#374151"
+                                  Cursor="Hand"
+                                  ToolTip="If checked, only elements in the current active view will be processed."/>
                     </StackPanel>
                 </Border>
             </Grid>

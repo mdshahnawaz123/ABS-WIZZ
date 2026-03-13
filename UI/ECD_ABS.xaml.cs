@@ -1,4 +1,4 @@
-﻿using ABS_WIZZ.ExternalEvents;
+using ABS_WIZZ.ExternalEvents;
 using Autodesk.Revit.UI;
 using System.Windows;
 using ABS_WIZZ;
@@ -131,6 +131,7 @@ namespace ABS_WIZZ.UI
                 return;
             }
 
+            roomCodeGenHandler.IsActiveView = CbActiveView.IsChecked == true;
             roomCodeGenEvent.Raise();
         }
 
@@ -146,6 +147,7 @@ namespace ABS_WIZZ.UI
                 return;
             }
 
+            roomEleGenHandler.IsActiveView = CbActiveView.IsChecked == true;
             roomEleGenEvent.Raise();
         }
 
@@ -161,6 +163,7 @@ namespace ABS_WIZZ.UI
                 return;
             }
 
+            uniqueNumberHandler.IsActiveView = CbActiveView.IsChecked == true;
             uniqueNumberEvent.Raise();
         }
 
@@ -176,6 +179,7 @@ namespace ABS_WIZZ.UI
                 return;
             }
 
+            roomCheckHandler.IsActiveView = CbActiveView.IsChecked == true;
             roomCheckEvent.Raise();
         }
 
@@ -191,6 +195,7 @@ namespace ABS_WIZZ.UI
                 return;
             }
 
+            onsiteEquTagHandler.IsActiveView = CbActiveView.IsChecked == true;
             onsiteEquTagEvent.Raise();
         }
 

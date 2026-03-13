@@ -1,6 +1,8 @@
-﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.UI;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using ABS_WIZZ;
 
@@ -9,6 +11,7 @@ namespace ABS_WIZZ.ExternalEvents
     public class RoomCheckEvent : IExternalEventHandler
     {
         public RoomCheckMode Mode { get; set; }
+        public bool IsActiveView { get; set; }
 
         public void Execute(UIApplication app)
         {
@@ -23,7 +26,20 @@ namespace ABS_WIZZ.ExternalEvents
 
                 if (Mode == RoomCheckMode.Host)
                 {
-                    var rooms = doc.GetRooms();
+                    IList<Room> rooms;
+                    if (IsActiveView && doc.ActiveView != null)
+                    {
+                        rooms = new FilteredElementCollector(doc, doc.ActiveView.Id)
+                            .OfCategory(BuiltInCategory.OST_Rooms)
+                            .WhereElementIsNotElementType()
+                            .Cast<Room>()
+                            .Where(r => r.Area > 0)
+                            .ToList();
+                    }
+                    else
+                    {
+                        rooms = doc.GetRooms();
+                    }
 
                     int missing = rooms.Count(r =>
                         string.IsNullOrWhiteSpace(r.LookupParameter("(01)ECD_ABS_L1_Asset")?.AsString()) ||

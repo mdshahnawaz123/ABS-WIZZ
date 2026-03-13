@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.UI;
 using System;
@@ -10,6 +10,7 @@ namespace ABS_WIZZ.ExternalEvents
     public class RoomEleGenEvent : IExternalEventHandler
     {
         public RoomCheckMode Mode { get; set; }
+        public bool IsActiveView { get; set; }
 
         public void Execute(UIApplication app)
         {
@@ -22,7 +23,13 @@ namespace ABS_WIZZ.ExternalEvents
             {
                 tx.Start();
 
-                var hostElements = new FilteredElementCollector(doc)
+                var collector = new FilteredElementCollector(doc);
+                if (IsActiveView && doc.ActiveView != null)
+                {
+                    collector.OwnedByView(doc.ActiveView.Id);
+                }
+
+                var hostElements = collector
                     .WhereElementIsNotElementType()
                     .Where(e => e.Category != null && !e.ViewSpecific)
                     .ToList();
@@ -32,7 +39,13 @@ namespace ABS_WIZZ.ExternalEvents
                     // ===============================
                     // HOST ROOM → HOST ELEMENT
                     // ===============================
-                    var rooms = new FilteredElementCollector(doc)
+                    var roomCollector = new FilteredElementCollector(doc);
+                    if (IsActiveView && doc.ActiveView != null)
+                    {
+                        roomCollector.OwnedByView(doc.ActiveView.Id);
+                    }
+
+                    var rooms = roomCollector
                         .OfClass(typeof(SpatialElement))
                         .WhereElementIsNotElementType()
                         .Cast<Room>()
@@ -50,7 +63,9 @@ namespace ABS_WIZZ.ExternalEvents
                         foreach (Element el in hostElements)
                         {
                             XYZ p = el.GetElementPoint();
-                            bool inside = Extension.IsPointInsideBBox(p, roomBB);
+                            if (p == null) continue;
+
+                            bool inside = room.IsPointInRoom(p);
 
                             if (!inside)
                             {

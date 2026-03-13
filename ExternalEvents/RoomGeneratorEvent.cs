@@ -1,8 +1,9 @@
-﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using static ABS_WIZZ.Extension;
 
 namespace ABS_WIZZ.ExternalEvents
@@ -10,6 +11,7 @@ namespace ABS_WIZZ.ExternalEvents
     public class RoomGeneratorEvent : IExternalEventHandler
     {
         public RoomCheckMode Mode { get; set; }
+        public bool IsActiveView { get; set; }
         public void Execute(UIApplication app)
         {
             try
@@ -23,7 +25,20 @@ namespace ABS_WIZZ.ExternalEvents
                     return;
                 }
 
-                IList<Room> rooms = doc.GetRooms();
+                IList<Room> rooms;
+                if (IsActiveView && doc.ActiveView != null)
+                {
+                    rooms = new FilteredElementCollector(doc, doc.ActiveView.Id)
+                        .OfCategory(BuiltInCategory.OST_Rooms)
+                        .WhereElementIsNotElementType()
+                        .Cast<Room>()
+                        .Where(r => r.Area > 0)
+                        .ToList();
+                }
+                else
+                {
+                    rooms = doc.GetRooms();
+                }
 
                 if (rooms == null || rooms.Count == 0)
                 {

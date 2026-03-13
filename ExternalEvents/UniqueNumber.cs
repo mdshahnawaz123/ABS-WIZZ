@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.UI;
 using System;
@@ -10,6 +10,7 @@ namespace ABS_WIZZ.ExternalEvents
     public class UniqueNumber : IExternalEventHandler
     {
         public RoomCheckMode Mode { get; set; }
+        public bool IsActiveView { get; set; }
 
         private const string EQUIP_TYPE_PARAM = "(09)ECD_ABS_L6_Equipment_Type";
         private const string UNIQUE_NUMBER_PARAM = "(16)ECD_ABS_L7_Equipment_Unique_Number";
@@ -79,7 +80,7 @@ namespace ABS_WIZZ.ExternalEvents
                 BoundingBoxXYZ roomBB = Extension.GetHostRoomBBox(room);
                 if (roomBB == null) continue;
 
-                List<Element> roomElements = GetElementsInRoom(hostElements, roomBB);
+                List<Element> roomElements = GetElementsInRoom(hostElements, room);
                 totalUpdated += AssignUniqueNumbers(roomElements);
             }
 
@@ -115,7 +116,7 @@ namespace ABS_WIZZ.ExternalEvents
                     BoundingBoxXYZ roomBB = Extension.GetLinkedRoomBBox(room, link);
                     if (roomBB == null) continue;
 
-                    List<Element> roomElements = GetElementsInRoom(hostElements, roomBB);
+                    List<Element> roomElements = GetElementsInRoom(hostElements, room);
                     totalUpdated += AssignUniqueNumbers(roomElements);
                 }
             }
@@ -126,9 +127,12 @@ namespace ABS_WIZZ.ExternalEvents
         // ============================
         // ELEMENTS INSIDE ROOM
         // ============================
-        private List<Element> GetElementsInRoom(List<Element> elements, BoundingBoxXYZ roomBB)
+        private List<Element> GetElementsInRoom(List<Element> elements, Room room)
         {
             List<Element> result = new List<Element>();
+
+            BoundingBoxXYZ roomBB = room.get_BoundingBox(null);
+            if (roomBB == null) return result;
 
             Outline outline = new Outline(roomBB.Min, roomBB.Max);
             BoundingBoxIntersectsFilter bbFilter = new BoundingBoxIntersectsFilter(outline);
@@ -137,8 +141,8 @@ namespace ABS_WIZZ.ExternalEvents
             {
                 XYZ p = el.GetElementPoint();
 
-                // Check point first
-                if (p != null && Extension.IsPointInsideBBox(p, roomBB))
+                // Check using IsPointInRoom for better accuracy
+                if (p != null && room.IsPointInRoom(p))
                 {
                     result.Add(el);
                     continue;
@@ -201,7 +205,13 @@ namespace ABS_WIZZ.ExternalEvents
         // ============================
         private List<Element> GetHostElements(Document doc)
         {
-            return new FilteredElementCollector(doc)
+            var collector = new FilteredElementCollector(doc);
+            if (IsActiveView && doc.ActiveView != null)
+            {
+                collector.OwnedByView(doc.ActiveView.Id);
+            }
+
+            return collector
                 .WhereElementIsNotElementType()
                 .Where(e => e.Category != null &&
                            !e.ViewSpecific &&

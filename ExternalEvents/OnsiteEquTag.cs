@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
@@ -9,6 +9,7 @@ namespace ABS_WIZZ.ExternalEvents
     public class OnsiteEquTag : IExternalEventHandler
     {
         public RoomCheckMode Mode { get; set; }
+        public bool IsActiveView { get; set; }
 
         public void Execute(UIApplication app)
         {
@@ -23,7 +24,13 @@ namespace ABS_WIZZ.ExternalEvents
                 {
                     tx.Start();
 
-                    List<Element> elements = new FilteredElementCollector(doc)
+                    var collector = new FilteredElementCollector(doc);
+                    if (IsActiveView && doc.ActiveView != null)
+                    {
+                        collector.OwnedByView(doc.ActiveView.Id);
+                    }
+
+                    List<Element> elements = collector
                         .WhereElementIsNotElementType()
                         .Where(e =>
                             e.Category != null &&
