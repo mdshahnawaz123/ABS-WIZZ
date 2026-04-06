@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:ABS_WIZZ.UI"
         mc:Ignorable="d"
         Title="ABS Manager"
-        Height="980"
+        Height="900"
         Width="900"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanMinimize"
