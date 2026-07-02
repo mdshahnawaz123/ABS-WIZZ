@@ -1,6 +1,10 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Asset.Services
+namespace ABS_WIZZ.Services
 {
     public class LoginResult
     {

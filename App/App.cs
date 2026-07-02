@@ -1,7 +1,8 @@
-﻿using Autodesk.Revit.UI;
+using Autodesk.Revit.UI;
 using System;
 using System.Reflection;
 using ABS_WIZZ.Utils;
+using ABS_WIZZ.Services;
 
 namespace ABS_WIZZ.App
 {
@@ -64,6 +65,8 @@ namespace ABS_WIZZ.App
                 button.SetContextualHelp(help);
 
                 // ============================================
+
+                BDDUpdater.CheckForUpdates(application);
 
                 return Result.Succeeded;
             }

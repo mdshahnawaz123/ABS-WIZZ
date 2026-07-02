@@ -1,7 +1,7 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using Asset.Services;
+using ABS_WIZZ.Services;
 using ABS_WIZZ.UI;
 using System;
 using System.Linq;
@@ -33,22 +33,10 @@ namespace ABS_WIZZ.Command
                     return Result.Succeeded;
                 }
 
-                // ── 2. License Check ──────────────────────────────────────────
-                var licenseResult = Task.Run(async () =>
-                    await LicenseManager.TryAutoLoginAsync()
-                ).GetAwaiter().GetResult();
-
-                if (!licenseResult.Success)
+                // ── 2. Login & License Guard ──────────────────────────────────
+                if (!LoginGuard.IsAuthorized())
                 {
-                    var login = new LoginWindow();
-                    var helper = new WindowInteropHelper(login);
-                    helper.Owner = System.Diagnostics.Process
-                        .GetCurrentProcess()
-                        .MainWindowHandle;
-
-                    bool? dlg = login.ShowDialog();
-                    if (dlg != true)
-                        return Result.Cancelled;
+                    return Result.Cancelled;
                 }
 
                 // ── 3. Launch Tool ────────────────────────────────────────────

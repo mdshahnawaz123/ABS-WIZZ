@@ -1,13 +1,15 @@
-﻿using System;
-using System.IO;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
-namespace Asset.Services
+namespace ABS_WIZZ.Services
 {
     public static class LicenseManager
     {
-        private static readonly string URL =
-            "https://raw.githubusercontent.com/mdshahnawaz123/plugin-access-control/main/users.json";
+        private static readonly string URL = SecretService.GetLicenseUrl();
 
         // Hidden backup file anchor (secondary trial record)
         private static string GetBackupTrialPath(string username)
@@ -99,25 +101,39 @@ namespace Asset.Services
         /// </summary>
         public static async Task<LoginResult> TryAutoLoginAsync()
         {
+            Logger.Log("LicenseManager: Starting auto-login check...");
             var token = TokenService.LoadToken();
             if (token == null)
-                return LoginResult.Fail("Login required.");
-
-            // 1. Machine binding check
-            if (token.MachineId != MachineHelper.GetMachineId())
-                return LoginResult.Fail("This license is bound to a different machine.");
-
-            // 2. Trial expiry check (uses both Registry + backup file)
-            var trialError = CheckTrialValidity(token.Username);
-            if (trialError != null)
             {
-                TokenService.DeleteToken();
-                return LoginResult.Fail(trialError);
+                Logger.Log("LicenseManager: No local token found.");
+                return LoginResult.Fail("Login required.");
+            }
+
+            bool isAdmin = string.Equals(token.Plan, "admin", StringComparison.OrdinalIgnoreCase);
+
+            // 1. Machine binding check (Skip for admin)
+            if (!isAdmin && token.MachineId != MachineHelper.GetMachineId())
+            {
+                Logger.Log($"LicenseManager: Machine mismatch. Token: {token.MachineId}, Current: {MachineHelper.GetMachineId()}", "ERROR");
+                return LoginResult.Fail("This license is bound to a different machine.");
+            }
+
+            // 2. Trial expiry check (uses both Registry + backup file) (Skip for admin)
+            if (!isAdmin)
+            {
+                var trialError = CheckTrialValidity(token.Username);
+                if (trialError != null)
+                {
+                    Logger.Log($"LicenseManager: Trial validation failed: {trialError}", "WARNING");
+                    TokenService.DeleteToken();
+                    return LoginResult.Fail(trialError);
+                }
             }
 
             // 3. Token expiry check
-            if (token.ExpiresUtc < DateTime.UtcNow)
+            if (!isAdmin && token.ExpiresUtc < DateTime.UtcNow)
             {
+                Logger.Log($"LicenseManager: Local token expired on {token.ExpiresUtc}.", "WARNING");
                 TokenService.DeleteToken();
                 return LoginResult.Fail("License expired.");
             }
@@ -132,23 +148,34 @@ namespace Asset.Services
                     var user = auth.GetUser(token.Username);
                     if (user == null || !user.Active)
                     {
+                        Logger.Log($"LicenseManager: User '{token.Username}' revoked on server.", "WARNING");
                         TokenService.DeleteToken();
                         return LoginResult.Fail("License has been revoked. Please contact support.");
                     }
 
-                    // Re-check trial against server expiry too
-                    if (user.Expires.ToUniversalTime() < DateTime.UtcNow)
+                    // Update admin status if changed on server
+                    isAdmin = string.Equals(user.Plan, "admin", StringComparison.OrdinalIgnoreCase);
+
+                    // Re-check trial against server expiry too (using Server True Time to prevent clock skewing)
+                    DateTime trueTime = auth.ServerTimeUtc ?? DateTime.UtcNow;
+                    if (!isAdmin && user.Expires.ToUniversalTime() < trueTime)
                     {
+                        Logger.Log($"LicenseManager: Server expiry reached. Exp: {user.Expires}, TrueTime: {trueTime}", "WARNING");
                         TokenService.DeleteToken();
                         return LoginResult.Fail("Server-side license expired.");
                     }
                 }
+                else
+                {
+                    Logger.Log("LicenseManager: GitHub unreachable. Allowing offline mode with cached token.");
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                // Network unavailable — allow offline use with existing token
+                Logger.LogError(ex, "LicenseManager: Online validation error (falling back to offline)");
             }
 
+            Logger.Log($"LicenseManager: Auto-login successful for {token.Username} ({token.Plan})");
             return LoginResult.Ok(token.Username, token.Plan, token.ExpiresUtc);
         }
 
@@ -163,40 +190,69 @@ namespace Asset.Services
                 return false;
             }
 
-            // 1. Trial expiry check BEFORE hitting the server
-            //    Only applies if a trial record already exists for this user+machine
-            var trialError = CheckTrialValidity(username);
-            if (trialError != null)
-            {
-                onError?.Invoke(trialError);
-                return false;
-            }
-
-            // 2. Validate credentials against remote JSON
+            // 1. Validate credentials against remote JSON first to check plan
             var auth = new AuthService(URL);
             var credentialsOk = await auth.ValidateCredentialsAsync(username, password, onError);
             if (!credentialsOk)
                 return false;
 
+            bool isAdmin = string.Equals(auth.CurrentUser.Plan, "admin", StringComparison.OrdinalIgnoreCase);
+
+            // 2. Trial expiry check BEFORE hitting the server
+            //    Only applies if a trial record already exists for this user+machine
+            if (!isAdmin)
+            {
+                var trialError = CheckTrialValidity(username);
+                if (trialError != null)
+                {
+                    onError?.Invoke(trialError);
+                    return false;
+                }
+            }
+
             // 3. Record trial start permanently on this machine (first login only)
             //    Both Registry and hidden backup file are written here
-            TrialService.RecordTrialStartIfNew(username);
-            WriteBackupTrialAnchor(username);
+            if (!isAdmin)
+            {
+                TrialService.RecordTrialStartIfNew(username);
+                WriteBackupTrialAnchor(username);
+            }
 
             // 4. Calculate effective expiry: trial cap vs server expiry — use the earlier one
-            var trialStatus = TrialService.GetTrialStatus(username);
-            var earliest = GetEarliestTrialStart(username);
             DateTime effectiveExpiry;
-
-            if (earliest.HasValue)
+            if (isAdmin)
             {
-                var trialExpiry = earliest.Value.AddDays(TrialService.TrialDays);
-                var serverExpiry = auth.CurrentUser.Expires.ToUniversalTime();
-                effectiveExpiry = serverExpiry < trialExpiry ? serverExpiry : trialExpiry;
+                effectiveExpiry = DateTime.MaxValue; // Lifetime for admins
             }
             else
             {
-                effectiveExpiry = auth.CurrentUser.Expires.ToUniversalTime();
+                var trialStatus = TrialService.GetTrialStatus(username);
+                var earliest = GetEarliestTrialStart(username);
+
+                // Adjust the expiry check using the True Network Time if available
+                DateTime trueTime = auth.ServerTimeUtc ?? DateTime.UtcNow;
+
+                if (earliest.HasValue)
+                {
+                    var trialExpiry = earliest.Value.AddDays(TrialService.TrialDays);
+                    var serverExpiry = auth.CurrentUser.Expires.ToUniversalTime();
+                    effectiveExpiry = serverExpiry < trialExpiry ? serverExpiry : trialExpiry;
+                    
+                    if (effectiveExpiry < trueTime)
+                    {
+                        onError?.Invoke("Your trial or license has expired.");
+                        return false;
+                    }
+                }
+                else
+                {
+                    effectiveExpiry = auth.CurrentUser.Expires.ToUniversalTime();
+                    if (effectiveExpiry < trueTime)
+                    {
+                        onError?.Invoke("Your server-side license has expired.");
+                        return false;
+                    }
+                }
             }
 
             // 5. Save token locally (encrypted via DPAPI)
